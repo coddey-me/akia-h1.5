@@ -24,17 +24,17 @@ def load_model_and_tokenizer(model_path: str, tokenizer_path: str = "tokenizer_v
     print(f"Loading model from checkpoint: {model_path}")
     checkpoint = torch.load(model_path, map_location='cpu')
 
-    # Load config saved in checkpoint and recreate config object
-    config_dict = checkpoint.get('config', {})
-    config = AkiaHRMConfig(**config_dict)
+    # --- Filter config keys ---
+    raw_config_dict = checkpoint.get('config', {})
+    filtered_config_dict = AkiaHRMConfig.filter_config_dict(raw_config_dict)
+    config = AkiaHRMConfig(**filtered_config_dict)
+
+    # --- Load state dict ---
+    state_dict = checkpoint.get('model_state_dict', checkpoint)
+    if any(k.startswith('module.') for k in state_dict.keys()):
+        state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
 
     model = AkiaHRM(config)
-    state_dict = checkpoint.get('model_state_dict', checkpoint)
-    
-    # Handle DataParallel 'module.' prefix if present
-    if any(key.startswith('module.') for key in state_dict.keys()):
-        state_dict = {key.replace('module.', ''): value for key, value in state_dict.items()}
-        
     model.load_state_dict(state_dict)
     model.eval()
 
@@ -45,6 +45,7 @@ def load_model_and_tokenizer(model_path: str, tokenizer_path: str = "tokenizer_v
     tokenizer = SimpleTokenizer.from_pretrained(tokenizer_path)
 
     return model, tokenizer, device
+
 
 def generate_response(model, tokenizer, device, prompt, max_length=256, temperature=0.8, top_k=50, top_p=0.9, reasoning_steps=8):
     input_tokens = tokenizer.encode(prompt)
