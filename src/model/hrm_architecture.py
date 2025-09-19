@@ -92,7 +92,9 @@ class HierarchicalAttention(nn.Module):
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
         
         if mask is not None:
-            scores = scores.masked_fill(mask == 0, -1e9)
+            # Use -65504.0 instead of -1e9 for float16 compatibility
+            mask_value = -65504.0 if scores.dtype == torch.float16 else -1e9
+            scores = scores.masked_fill(mask == 0, mask_value)
         
         attn_weights = F.softmax(scores, dim=-1)
         attn_weights = self.dropout(attn_weights)
@@ -370,7 +372,8 @@ class AkiaHRM(nn.Module):
                 # Apply top-k filtering
                 if top_k > 0:
                     indices_to_remove = next_token_logits < torch.topk(next_token_logits, top_k)[0][..., -1, None]
-                    next_token_logits[indices_to_remove] = -float('Inf')
+                    mask_value = -65504.0 if next_token_logits.dtype == torch.float16 else -float('Inf')
+                    next_token_logits[indices_to_remove] = mask_value
                 
                 # Apply top-p filtering
                 if top_p < 1.0:
@@ -382,7 +385,8 @@ class AkiaHRM(nn.Module):
                     sorted_indices_to_remove[..., 0] = 0
                     
                     indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
-                    next_token_logits[indices_to_remove] = -float('Inf')
+                    mask_value = -65504.0 if next_token_logits.dtype == torch.float16 else -float('Inf')
+                    next_token_logits[indices_to_remove] = mask_value
                 
                 # Sample next token
                 probs = F.softmax(next_token_logits, dim=-1)
