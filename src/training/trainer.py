@@ -122,17 +122,27 @@ class AkiaTrainer:
         # Forward pass with mixed precision
         if self.use_amp:
             try:
-                # Use new API if available
-                with torch.amp.autocast('cuda'):
+                # Use new API if available with dtype control
+                with torch.amp.autocast('cuda', dtype=torch.float16):
                     outputs = self.model(
                         input_ids=input_ids, 
                         labels=labels, 
                         reasoning_steps=self.config.get('reasoning_steps_train', 6)
                     )
                     loss = outputs['total_loss'] / self.config.get('gradient_accumulation_steps', 4)
-            except (AttributeError, TypeError):
-                # Fallback to old API
-                with torch.cuda.amp.autocast():
+            except (AttributeError, TypeError, RuntimeError):
+                # Fallback to old API or disable mixed precision
+                try:
+                    with torch.cuda.amp.autocast():
+                        outputs = self.model(
+                            input_ids=input_ids, 
+                            labels=labels, 
+                            reasoning_steps=self.config.get('reasoning_steps_train', 6)
+                        )
+                        loss = outputs['total_loss'] / self.config.get('gradient_accumulation_steps', 4)
+                except RuntimeError:
+                    # Disable mixed precision for this step
+                    print("⚠️ Mixed precision failed, falling back to float32")
                     outputs = self.model(
                         input_ids=input_ids, 
                         labels=labels, 
