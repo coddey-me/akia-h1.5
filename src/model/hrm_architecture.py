@@ -13,7 +13,7 @@ class AkiaHRMConfig:
     vocab_size: int = 3788
     d_model: int = 512
     n_layers_high: int = 4  # High-level planning layers
-    n_layers_low: int = 8   # Low-level execution layers
+    n_layers_low: int = 6   # Low-level execution layers
     n_heads: int = 8
     d_ff: int = 2048
     max_sequence_length: int = 512
