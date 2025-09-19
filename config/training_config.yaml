@@ -31,7 +31,7 @@ training:
   max_sequence_length: 1024
   
   # Performance Optimization
-  mixed_precision: true
+  mixed_precision: false        # Disabled to avoid float16 overflow
   dataloader_num_workers: 2
   pin_memory: true
   
