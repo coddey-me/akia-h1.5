@@ -415,7 +415,51 @@ class AkiaHRM(nn.Module):
     def from_pretrained(cls, model_path: str) -> 'AkiaHRM':
         """Load a pretrained model"""
         checkpoint = torch.load(model_path, map_location='cpu')
-        config = AkiaHRMConfig(**checkpoint['config'])
+        
+        # Filter config to only include AkiaHRMConfig parameters
+        if 'config' in checkpoint:
+            saved_config = checkpoint['config']
+            
+            # Valid AkiaHRMConfig parameters
+            valid_params = {
+                'vocab_size', 'd_model', 'n_layers_high', 'n_layers_low', 'n_heads', 'd_ff',
+                'max_sequence_length', 'dropout', 'layer_norm_epsilon', 'reasoning_steps',
+                'halt_threshold', 'use_flash_attention', 'high_level_timescale',
+                'cross_hierarchy_dim', 'reasoning_head_dim'
+            }
+            
+            # Filter to only valid parameters
+            filtered_config = {k: v for k, v in saved_config.items() if k in valid_params}
+            
+            # Ensure required parameters have defaults if missing
+            default_config = {
+                'vocab_size': 32000,
+                'd_model': 512,
+                'n_layers_high': 4,
+                'n_layers_low': 8,
+                'n_heads': 8,
+                'd_ff': 2048,
+                'max_sequence_length': 4096,
+                'dropout': 0.1,
+                'layer_norm_epsilon': 1e-5,
+                'reasoning_steps': 8,
+                'halt_threshold': 0.85,
+                'use_flash_attention': True,
+                'high_level_timescale': 2,
+                'cross_hierarchy_dim': 192,
+                'reasoning_head_dim': 96
+            }
+            
+            # Merge with defaults
+            for key, default_value in default_config.items():
+                if key not in filtered_config:
+                    filtered_config[key] = default_value
+            
+            config = AkiaHRMConfig(**filtered_config)
+        else:
+            # Fallback to default config if no config in checkpoint
+            config = AkiaHRMConfig()
+        
         model = cls(config)
         model.load_state_dict(checkpoint['model_state_dict'])
         return model
