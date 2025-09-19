@@ -1,0 +1,59 @@
+# config/model_config.yaml
+# Purpose: Core model architecture configuration for Akia HRM
+
+model:
+  name: "akia-hrm-27m"
+  version: "1.4"
+  description: "Hierarchical Reasoning Model with 27M parameters"
+  
+  # Core Architecture Parameters
+  vocab_size: 32000
+  d_model: 512
+  n_layers_high: 4      # High-level planning layers
+  n_layers_low: 8       # Low-level execution layers
+  n_heads: 8
+  d_ff: 1536
+  max_sequence_length: 4096
+  dropout: 0.1
+  layer_norm_epsilon: 1e-5
+  
+  # HRM-Specific Parameters
+  reasoning_steps: 8
+  halt_threshold: 0.85
+  high_level_timescale: 2
+  cross_hierarchy_dim: 192
+  reasoning_head_dim: 96
+  
+  # Attention Configuration
+  attention:
+    use_flash_attention: true
+    attention_dropout: 0.1
+    use_rotary_pos_emb: true
+    max_rotary_length: 4096
+    rotary_base: 10000
+  
+  # Initialization
+  initialization:
+    weight_init_std: 0.02
+    bias_init: "zeros"
+    layer_norm_init: "ones"
+  
+  # Training Stability
+  gradient_clip_norm: 1.0
+  gradient_checkpointing: false  # Disable for speed on Kaggle
+  
+  # Memory Optimization
+  use_cache: true
+  low_cpu_mem_usage: false
+  torch_dtype: "float16"  # Use mixed precision
+
+# Target Configuration
+target_parameters: 27000000
+parameter_tolerance: 500000  # Allow ±500k parameters
+
+# Model Validation
+validation:
+  check_parameter_count: true
+  verify_forward_pass: true
+  test_generation: true
+  benchmark_speed: false  # Set to true for performance testing
