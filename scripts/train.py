@@ -128,7 +128,9 @@ def main():
         )
     
     # Update model config with actual vocab size
-    model_config['vocab_size'] = tokenizer.get_vocab_size()
+    actual_vocab_size = tokenizer.get_vocab_size()
+    model_config['vocab_size'] = actual_vocab_size
+    print(f"📝 Updated vocab_size to actual tokenizer size: {actual_vocab_size}")
     
     # Initialize model
     print("\n🧠 Initializing Akia HRM model...")
