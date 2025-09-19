@@ -29,7 +29,7 @@ class AkiaHRMConfig:
     reasoning_head_dim: int = 96
 
     @classmethod
-    def filter_config_dict(cls, config_dict: Dict) -> Dict:
+    def filter_config_dict(cls, config_dict):
         valid_keys = {field.name for field in fields(cls)}
         filtered = {k: v for k, v in config_dict.items() if k in valid_keys}
         ignored = set(config_dict.keys()) - valid_keys
@@ -422,25 +422,17 @@ class AkiaHRM(nn.Module):
         }
 
     
-
-    def filter_config_dict(config_dict, config_class):
-        valid_keys = {field.name for field in fields(config_class)}
-        filtered = {k: v for k, v in config_dict.items() if k in valid_keys}
-        ignored = set(config_dict.keys()) - valid_keys
-        if ignored:
-            print(f"⚠️ Ignored unexpected config keys: {ignored}")
-        return filtered
-    
     @classmethod
-    def from_pretrained(cls, model_path: str) -> 'AkiaHRM':
-        checkpoint = torch.load(model_path, map_location="cpu")
-        config_dict = checkpoint.get("config", {})
+    def from_pretrained(cls, model_path: str):
+        checkpoint = torch.load(model_path, map_location='cpu')
+        config_dict = checkpoint.get('config', {})
         filtered_config = AkiaHRMConfig.filter_config_dict(config_dict)
         config = AkiaHRMConfig(**filtered_config)
         model = cls(config)
-        state_dict = checkpoint.get("model_state_dict", checkpoint)
-        if any(key.startswith("module.") for key in state_dict.keys()):
-            state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
+        
+        state_dict = checkpoint.get('model_state_dict', checkpoint)
+        if any(k.startswith('module.') for k in state_dict):
+            state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
         model.load_state_dict(state_dict)
         return model
 
