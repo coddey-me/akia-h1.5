@@ -121,13 +121,24 @@ class AkiaTrainer:
         
         # Forward pass with mixed precision
         if self.use_amp:
-            with torch.cuda.amp.autocast():
-                outputs = self.model(
-                    input_ids=input_ids, 
-                    labels=labels, 
-                    reasoning_steps=self.config.get('reasoning_steps_train', 6)
-                )
-                loss = outputs['total_loss'] / self.config.get('gradient_accumulation_steps', 4)
+            try:
+                # Use new API if available
+                with torch.amp.autocast('cuda'):
+                    outputs = self.model(
+                        input_ids=input_ids, 
+                        labels=labels, 
+                        reasoning_steps=self.config.get('reasoning_steps_train', 6)
+                    )
+                    loss = outputs['total_loss'] / self.config.get('gradient_accumulation_steps', 4)
+            except (AttributeError, TypeError):
+                # Fallback to old API
+                with torch.cuda.amp.autocast():
+                    outputs = self.model(
+                        input_ids=input_ids, 
+                        labels=labels, 
+                        reasoning_steps=self.config.get('reasoning_steps_train', 6)
+                    )
+                    loss = outputs['total_loss'] / self.config.get('gradient_accumulation_steps', 4)
         else:
             outputs = self.model(
                 input_ids=input_ids, 
@@ -163,12 +174,20 @@ class AkiaTrainer:
             labels = batch['labels'].to(self.device)
             
             if self.use_amp:
-                with torch.cuda.amp.autocast():
-                    outputs = self.model(
-                        input_ids=input_ids, 
-                        labels=labels, 
-                        reasoning_steps=self.config.get('reasoning_steps_eval', 8)
-                    )
+                try:
+                    with torch.amp.autocast('cuda'):
+                        outputs = self.model(
+                            input_ids=input_ids, 
+                            labels=labels, 
+                            reasoning_steps=self.config.get('reasoning_steps_eval', 8)
+                        )
+                except (AttributeError, TypeError):
+                    with torch.cuda.amp.autocast():
+                        outputs = self.model(
+                            input_ids=input_ids, 
+                            labels=labels, 
+                            reasoning_steps=self.config.get('reasoning_steps_eval', 8)
+                        )
             else:
                 outputs = self.model(
                     input_ids=input_ids, 
