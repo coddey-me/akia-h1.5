@@ -8,7 +8,7 @@ model:
   d_ff: 2048                # 4 * d_model
   max_sequence_length: 4096
   dropout: 0.1
-  layer_norm_epsilon: 1e-5
+  layer_norm_epsilon: 0.00001  # 1e-5 as decimal to ensure float parsing
   
   # HRM-Specific Parameters
   reasoning_steps: 8
