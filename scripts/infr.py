@@ -10,7 +10,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import argparse
 import torch
-from model.hrm_architecture import AkiaHRM  # Adjust import as necessary
+from model.hrm_architecture import AkiaHRM , AkiaHRMConfig # Adjust import as necessary
 from utils.tokenizer import SimpleTokenizer  # Adjust import as necessary
 
 def load_model_and_tokenizer(model_path: str, tokenizer_path: str = "tokenizer_vocab.json"):
@@ -22,8 +22,8 @@ def load_model_and_tokenizer(model_path: str, tokenizer_path: str = "tokenizer_v
     config_dict = checkpoint.get('config', {})
     
     # Initialize model with checkpoint config
-    config = AkiaHRM.AkiaHRMConfig.filter_config_dict(config_dict)
-    model_config = AkiaHRM.AkiaHRMConfig(**config)
+    config = AkiaHRMConfig.filter_config_dict(config_dict)
+    model_config = AkiaHRMConfig(**config)
 
     # Instantiate model
     model = AkiaHRM(model_config)
