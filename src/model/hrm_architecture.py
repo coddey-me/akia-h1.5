@@ -416,49 +416,58 @@ class AkiaHRM(nn.Module):
         """Load a pretrained model"""
         checkpoint = torch.load(model_path, map_location='cpu')
         
-        # Filter config to only include AkiaHRMConfig parameters
+        # Extract the actual configuration used during training
         if 'config' in checkpoint:
             saved_config = checkpoint['config']
             
-            # Valid AkiaHRMConfig parameters
-            valid_params = {
-                'vocab_size', 'd_model', 'n_layers_high', 'n_layers_low', 'n_heads', 'd_ff',
-                'max_sequence_length', 'dropout', 'layer_norm_epsilon', 'reasoning_steps',
-                'halt_threshold', 'use_flash_attention', 'high_level_timescale',
-                'cross_hierarchy_dim', 'reasoning_head_dim'
+            # Create model config from saved training config
+            model_config_dict = {}
+            
+            # Map training config to model config, using saved values directly
+            config_mapping = {
+                'vocab_size': saved_config.get('vocab_size', 32000),
+                'd_model': saved_config.get('d_model', 512), 
+                'n_layers_high': saved_config.get('n_layers_high', 4),
+                'n_layers_low': saved_config.get('n_layers_low', 8),
+                'n_heads': saved_config.get('n_heads', 8),
+                'd_ff': saved_config.get('d_ff', 2048),
+                'max_sequence_length': saved_config.get('max_sequence_length', 4096),
+                'dropout': float(saved_config.get('dropout', 0.1)),
+                'layer_norm_epsilon': float(saved_config.get('layer_norm_epsilon', 1e-5)),
+                'reasoning_steps': saved_config.get('reasoning_steps', 8),
+                'halt_threshold': float(saved_config.get('halt_threshold', 0.85)),
+                'use_flash_attention': saved_config.get('use_flash_attention', True),
+                'high_level_timescale': saved_config.get('high_level_timescale', 2),
+                'cross_hierarchy_dim': saved_config.get('cross_hierarchy_dim', 192),
+                'reasoning_head_dim': saved_config.get('reasoning_head_dim', 96)
             }
             
-            # Filter to only valid parameters
-            filtered_config = {k: v for k, v in saved_config.items() if k in valid_params}
+            config = AkiaHRMConfig(**config_mapping)
             
-            # Ensure required parameters have defaults if missing
-            default_config = {
-                'vocab_size': 32000,
-                'd_model': 512,
-                'n_layers_high': 4,
-                'n_layers_low': 8,
-                'n_heads': 8,
-                'd_ff': 2048,
-                'max_sequence_length': 4096,
-                'dropout': 0.1,
-                'layer_norm_epsilon': 1e-5,
-                'reasoning_steps': 8,
-                'halt_threshold': 0.85,
-                'use_flash_attention': True,
-                'high_level_timescale': 2,
-                'cross_hierarchy_dim': 192,
-                'reasoning_head_dim': 96
-            }
-            
-            # Merge with defaults
-            for key, default_value in default_config.items():
-                if key not in filtered_config:
-                    filtered_config[key] = default_value
-            
-            config = AkiaHRMConfig(**filtered_config)
         else:
-            # Fallback to default config if no config in checkpoint
-            config = AkiaHRMConfig()
+            # Fallback: try to infer config from model weights
+            model_state = checkpoint['model_state_dict']
+            
+            # Infer vocab size from embedding layer
+            vocab_size = model_state['token_embedding.weight'].shape[0]
+            d_model = model_state['token_embedding.weight'].shape[1]
+            
+            # Count layers by checking state dict keys
+            high_layers = max([int(k.split('.')[1]) for k in model_state.keys() if k.startswith('high_level_layers.')]) + 1
+            low_layers = max([int(k.split('.')[1]) for k in model_state.keys() if k.startswith('low_level_layers.')]) + 1
+            
+            # Infer other parameters from layer weights
+            n_heads = 8  # Default assumption
+            d_ff = model_state['high_level_layers.0.ffn.0.weight'].shape[0] if 'high_level_layers.0.ffn.0.weight' in model_state else d_model * 4
+            
+            config = AkiaHRMConfig(
+                vocab_size=vocab_size,
+                d_model=d_model,
+                n_layers_high=high_layers,
+                n_layers_low=low_layers,
+                n_heads=n_heads,
+                d_ff=d_ff
+            )
         
         model = cls(config)
         model.load_state_dict(checkpoint['model_state_dict'])
