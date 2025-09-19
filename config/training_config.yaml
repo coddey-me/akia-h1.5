@@ -8,13 +8,13 @@ training:
   gradient_accumulation_steps: 4
   effective_batch_size: 32
   
-  # Optimization
-  learning_rate: 1e-4
-  min_learning_rate: 1e-6
+  # Optimization - Ensure values are numbers, not strings
+  learning_rate: 0.0001        # 1e-4 as float
+  min_learning_rate: 0.000001  # 1e-6 as float
   weight_decay: 0.01
   beta1: 0.9
   beta2: 0.95
-  epsilon: 1e-8
+  epsilon: 0.00000001          # 1e-8 as float
   
   # Training Schedule
   max_epochs: 25
