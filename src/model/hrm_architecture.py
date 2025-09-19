@@ -413,12 +413,12 @@ class AkiaHRM(nn.Module):
     
     @classmethod
     def from_pretrained(cls, model_path: str) -> 'AkiaHRM':
-        """Load a pretrained model"""
         checkpoint = torch.load(model_path, map_location='cpu')
         config = AkiaHRMConfig(**checkpoint['config'])
         model = cls(config)
         model.load_state_dict(checkpoint['model_state_dict'])
         return model
+
     
     def save_pretrained(self, save_path: str):
         """Save the model"""
