@@ -1,12 +1,9 @@
 model:
-  name: "akia-hrm-27m"
-  version: "1.4"
-  
   # Core Architecture
   vocab_size: 32000
   d_model: 512
-  n_layers_high: 4      # High-level planning layers
-  n_layers_low: 8       # Low-level execution layers
+  n_layers_high: 4
+  n_layers_low: 8
   n_heads: 8
   d_ff: 1536
   max_sequence_length: 4096
@@ -20,26 +17,5 @@ model:
   cross_hierarchy_dim: 192
   reasoning_head_dim: 96
   
-  # Attention Configuration
+  # Additional Configuration
   use_flash_attention: true
-  attention_dropout: 0.1
-  use_rotary_pos_emb: true
-  
-  # Training Configuration
-  gradient_clip_norm: 1.0
-  gradient_checkpointing: false
-  
-  # Memory Optimization
-  torch_dtype: "float16"
-  low_cpu_mem_usage: false
-  use_cache: true
-
-# Parameter Verification
-target_parameters: 27000000
-parameter_tolerance: 500000
-
-# Model Validation
-validation:
-  check_parameter_count: true
-  verify_forward_pass: true
-  test_generation: true
