@@ -1,11 +1,11 @@
 model:
-  # Core Architecture - Optimized for exactly 27M parameters
+  # Core Architecture - Precisely calibrated for 27M parameters
   vocab_size: 3788          # Use actual tokenizer vocab size
-  d_model: 768              # Increased from 384 to 768
-  n_layers_high: 4          # Back to 4 layers
-  n_layers_low: 8           # Back to 8 layers  
-  n_heads: 12               # Increased from 6 to 12
-  d_ff: 3072                # 4 * d_model = 4 * 768
+  d_model: 512              # Sweet spot for 27M target
+  n_layers_high: 4          # High-level planning layers
+  n_layers_low: 6           # Reduced to fit parameter budget
+  n_heads: 8                # 512 / 8 = 64 per head
+  d_ff: 2048                # 4 * d_model
   max_sequence_length: 4096
   dropout: 0.1
   layer_norm_epsilon: 1e-5
@@ -14,8 +14,8 @@ model:
   reasoning_steps: 8
   halt_threshold: 0.85
   high_level_timescale: 2
-  cross_hierarchy_dim: 256   # Increased from 128
-  reasoning_head_dim: 128    # Increased from 64
+  cross_hierarchy_dim: 192
+  reasoning_head_dim: 96
   
   # Additional Configuration
   use_flash_attention: true
