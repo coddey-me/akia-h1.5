@@ -1,10 +1,9 @@
-# Akia HRM v1.4 - Hierarchical Reasoning Model
+# Akia HRM v1.5 - Hierarchical Reasoning Model
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?logo=PyTorch&logoColor=white)](https://pytorch.org/)
 
-Akia is a **27-million parameter Hierarchical Reasoning Model** based on cutting-edge research from Sapient Intelligence. Despite its compact size, Akia delivers enterprise-grade performance across conversational AI, advanced coding, and research applications.
+Akia is a **39-million parameter Hierarchical Reasoning Model** based on cutting-edge research from Sapient Intelligence. Despite its compact size, Akia delivers enterprise-grade performance across conversational AI, advanced coding, and research applications.
 
 ## 🚀 Key Features
 
