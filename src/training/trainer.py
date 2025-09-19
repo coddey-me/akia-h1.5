@@ -19,6 +19,10 @@ class AkiaTrainer:
         self.tokenizer = tokenizer
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
+        # Clear CUDA cache before initialization
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
         # Move model to device
         self.model.to(self.device)
         
@@ -39,6 +43,12 @@ class AkiaTrainer:
         
         print(f"Trainer initialized on device: {self.device}")
         print(f"Mixed precision: {self.use_amp}")
+        
+        # Print GPU memory usage
+        if torch.cuda.is_available():
+            memory_allocated = torch.cuda.memory_allocated() / 1024**3
+            memory_reserved = torch.cuda.memory_reserved() / 1024**3
+            print(f"GPU Memory - Allocated: {memory_allocated:.2f} GB, Reserved: {memory_reserved:.2f} GB")
     
     def setup_optimizer_and_scheduler(self, train_dataloader):
         """Setup optimizer and learning rate scheduler"""
@@ -313,6 +323,10 @@ class AkiaTrainer:
                     self.scheduler.step()
                     self.optimizer.zero_grad()
                     self.global_step += 1
+                    
+                    # Clear CUDA cache periodically
+                    if self.global_step % 10 == 0 and torch.cuda.is_available():
+                        torch.cuda.empty_cache()
                 
                 # Logging
                 if self.global_step % logging_steps == 0:
