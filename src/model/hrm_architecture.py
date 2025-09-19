@@ -28,6 +28,15 @@ class AkiaHRMConfig:
     cross_hierarchy_dim: int = 192
     reasoning_head_dim: int = 96
 
+    @classmethod
+    def filter_config_dict(cls, config_dict: Dict) -> Dict:
+        valid_keys = {field.name for field in fields(cls)}
+        filtered = {k: v for k, v in config_dict.items() if k in valid_keys}
+        ignored = set(config_dict.keys()) - valid_keys
+        if ignored:
+            print(f"⚠️ Ignored unexpected config keys: {ignored}")
+        return filtered
+
 class RotaryPositionalEncoding(nn.Module):
     """Rotary Positional Encoding"""
     
@@ -429,13 +438,12 @@ class AkiaHRM(nn.Module):
         filtered_config = AkiaHRMConfig.filter_config_dict(config_dict)
         config = AkiaHRMConfig(**filtered_config)
         model = cls(config)
-
         state_dict = checkpoint.get("model_state_dict", checkpoint)
         if any(key.startswith("module.") for key in state_dict.keys()):
             state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
-        
         model.load_state_dict(state_dict)
         return model
+
 
     
     def save_pretrained(self, save_path: str):
