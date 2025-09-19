@@ -30,7 +30,12 @@ class AkiaTrainer:
         # Setup mixed precision
         self.use_amp = config.get('mixed_precision', True)
         if self.use_amp:
-            self.scaler = torch.cuda.amp.GradScaler()
+            try:
+                # Use new API if available
+                self.scaler = torch.amp.GradScaler('cuda')
+            except AttributeError:
+                # Fallback to old API
+                self.scaler = torch.cuda.amp.GradScaler()
         
         print(f"Trainer initialized on device: {self.device}")
         print(f"Mixed precision: {self.use_amp}")
