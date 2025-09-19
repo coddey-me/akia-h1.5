@@ -1,26 +1,14 @@
-# config/training_config.yaml
-# Purpose: Training hyperparameters and optimization settings
-
 training:
-  # Experiment Configuration
+  # Experiment Setup
   experiment_name: "akia-hrm-v1.4"
-  run_name: null  # Will be auto-generated if null
-  tags: ["akia", "hrm", "hierarchical-reasoning", "27m"]
-  
-  # Data Configuration
-  data_path: "/kaggle/input/akia-training-data/akia_training_data.pkl"
-  max_sequence_length: 1024  # Reduced for memory efficiency
-  train_split: 0.9
-  val_split: 0.1
+  data_path: "data/processed/akia_training_data.pkl"
   
   # Batch Configuration
   batch_size: 8
   gradient_accumulation_steps: 4
-  effective_batch_size: 32  # batch_size * gradient_accumulation_steps
-  dataloader_num_workers: 2
-  pin_memory: true
+  effective_batch_size: 32
   
-  # Optimization Configuration
+  # Optimization
   learning_rate: 1e-4
   min_learning_rate: 1e-6
   weight_decay: 0.01
@@ -28,100 +16,29 @@ training:
   beta2: 0.95
   epsilon: 1e-8
   
-  # Learning Rate Schedule
-  warmup_steps: 500
-  lr_scheduler: "cosine_annealing"
-  T_max: null  # Will be calculated based on dataset size
-  eta_min: 1e-6
-  
-  # Training Duration
+  # Training Schedule
   max_epochs: 25
-  max_steps: null  # If specified, overrides max_epochs
+  warmup_steps: 500
   
   # Evaluation and Logging
   eval_steps: 250
   save_steps: 500
   logging_steps: 50
-  log_grad_norm: true
   
-  # Memory and Performance
+  # Data Configuration
+  train_split: 0.9
+  val_split: 0.1
+  max_sequence_length: 1024
+  
+  # Performance Optimization
   mixed_precision: true
-  gradient_checkpointing: false
-  use_compiled_model: false  # PyTorch 2.0 compilation (may not work on Kaggle)
+  dataloader_num_workers: 2
+  pin_memory: true
   
-  # Early Stopping
-  early_stopping:
-    enabled: true
-    patience: 5
-    min_delta: 0.001
-    monitor: "val_loss"
-    mode: "min"
+  # Model-specific
+  reasoning_steps_train: 6
+  reasoning_steps_eval: 8
   
-  # Model Specific
-  reasoning_steps_train: 6  # Fewer steps during training for speed
-  reasoning_steps_eval: 8   # More steps during evaluation for quality
-  
-  # Regularization
-  dropout_rate: 0.1
-  attention_dropout: 0.1
-  residual_dropout: 0.1
-  
-  # Loss Configuration
-  loss_function: "cross_entropy"
-  label_smoothing: 0.0
-  ignore_index: -100
-
-# Kaggle Optimization
-kaggle:
-  # Time Management
-  max_gpu_hours_per_week: 30
-  checkpoint_interval_minutes: 30
-  auto_stop_buffer_hours: 0.5
-  
-  # Resource Management
-  monitor_gpu_memory: true
-  clear_cache_frequency: 100  # Clear CUDA cache every N steps
-  
-  # Checkpointing
-  save_best_model: true
-  save_last_checkpoint: true
-  max_checkpoints_to_keep: 3
-
-# Weights & Biases Configuration
-wandb:
-  enabled: true
-  project: "akia-hrm"
-  entity: null  # Your W&B username
-  group: "akia-v1.4"
-  job_type: "train"
-  tags: ["kaggle", "hierarchical-reasoning", "27m-params"]
-  
-  # Logging Configuration
-  log_model: "end"  # Options: false, "end", "all"
-  log_code: true
-  log_gradients: false  # Set to true for debugging
-  log_parameters: false # Set to true for debugging
-  
-  # Monitoring
-  watch_model: false  # Can be expensive, enable for debugging
-  log_freq: 50
-
-# Model Evaluation
-evaluation:
-  # Metrics to compute
-  metrics: ["perplexity", "bleu", "rouge"]
-  
-  # Generation parameters for evaluation
-  generation:
-    max_length: 256
-    temperature: 0.8
-    top_k: 50
-    top_p: 0.9
-    do_sample: true
-    num_return_sequences: 1
-    reasoning_steps: 8
-  
-  # Evaluation frequency
-  eval_during_training: true
-  eval_on_start: false
-  final_evaluation: true
+  # Weights & Biases
+  use_wandb: true
+  wandb_project: "akia-hrm"
