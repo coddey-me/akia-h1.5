@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.nn import LayerNorm, Linear, Embedding, Dropout
 import math
 from typing import Optional, Tuple, List, Dict
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 
 @dataclass
 class AkiaHRMConfig:
@@ -26,6 +26,22 @@ class AkiaHRMConfig:
     high_level_timescale: int = 2
     cross_hierarchy_dim: int = 192
     reasoning_head_dim: int = 96
+    
+    @classmethod
+    def filter_config_dict(cls, config_dict: Dict) -> Dict:
+        """Filter config dictionary to only include valid AkiaHRMConfig parameters"""
+        # Get all field names from the dataclass
+        valid_fields = {field.name for field in fields(cls)}
+        
+        # Filter the config dict to only include valid parameters
+        filtered_config = {k: v for k, v in config_dict.items() if k in valid_fields}
+        
+        # Log any ignored parameters
+        ignored = set(config_dict.keys()) - valid_fields
+        if ignored:
+            print(f"⚠️ Ignoring unexpected config parameters: {ignored}")
+        
+        return filtered_config
 
 class RotaryPositionalEncoding(nn.Module):
     """Rotary Positional Encoding"""
@@ -413,15 +429,60 @@ class AkiaHRM(nn.Module):
     
     @classmethod
     def from_pretrained(cls, model_path: str) -> 'AkiaHRM':
-        """Load a pretrained model"""
-        checkpoint = torch.load(model_path, map_location='cpu')
-        config = AkiaHRMConfig(**checkpoint['config'])
-        model = cls(config)
-        model.load_state_dict(checkpoint['model_state_dict'])
-        return model
+        """Load a pretrained model with robust config handling"""
+        try:
+            checkpoint = torch.load(model_path, map_location='cpu')
+            
+            # Handle different checkpoint formats
+            if 'config' in checkpoint:
+                config_dict = checkpoint['config']
+            elif 'model_config' in checkpoint:
+                config_dict = checkpoint['model_config']
+            else:
+                raise KeyError("No config found in checkpoint")
+            
+            # Filter config to only include valid parameters
+            filtered_config = AkiaHRMConfig.filter_config_dict(config_dict)
+            config = AkiaHRMConfig(**filtered_config)
+            
+            # Create model
+            model = cls(config)
+            
+            # Load state dict
+            if 'model_state_dict' in checkpoint:
+                state_dict = checkpoint['model_state_dict']
+            elif 'state_dict' in checkpoint:
+                state_dict = checkpoint['state_dict']
+            else:
+                # Assume the checkpoint is the state dict itself
+                state_dict = checkpoint
+            
+            # Handle DataParallel wrapped models
+            if any(key.startswith('module.') for key in state_dict.keys()):
+                state_dict = {key.replace('module.', ''): value for key, value in state_dict.items()}
+            
+            # Load with strict=False to handle minor mismatches
+            missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+            
+            if missing_keys:
+                print(f"⚠️ Missing keys in checkpoint: {missing_keys}")
+            if unexpected_keys:
+                print(f"⚠️ Unexpected keys in checkpoint: {unexpected_keys}")
+            
+            print(f"✅ Model loaded successfully from {model_path}")
+            return model
+            
+        except Exception as e:
+            print(f"❌ Failed to load model: {e}")
+            print(f"\nDebugging info:")
+            checkpoint = torch.load(model_path, map_location='cpu')
+            print(f"Checkpoint keys: {list(checkpoint.keys())}")
+            if 'config' in checkpoint:
+                print(f"Config keys: {list(checkpoint['config'].keys())}")
+            raise
     
     def save_pretrained(self, save_path: str):
-        """Save the model"""
+        """Save the model with clean config"""
         checkpoint = {
             'config': {
                 'vocab_size': self.config.vocab_size,
@@ -435,6 +496,7 @@ class AkiaHRM(nn.Module):
                 'layer_norm_epsilon': self.config.layer_norm_epsilon,
                 'reasoning_steps': self.config.reasoning_steps,
                 'halt_threshold': self.config.halt_threshold,
+                'use_flash_attention': self.config.use_flash_attention,
                 'high_level_timescale': self.config.high_level_timescale,
                 'cross_hierarchy_dim': self.config.cross_hierarchy_dim,
                 'reasoning_head_dim': self.config.reasoning_head_dim
