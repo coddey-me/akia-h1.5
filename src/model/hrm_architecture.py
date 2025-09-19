@@ -5,6 +5,7 @@ from torch.nn import LayerNorm, Linear, Embedding, Dropout
 import math
 from typing import Optional, Tuple, List, Dict
 from dataclasses import dataclass
+from dataclasses import fields
 
 @dataclass
 class AkiaHRMConfig:
@@ -410,6 +411,16 @@ class AkiaHRM(nn.Module):
             'generated_ids': generated_ids,
             'reasoning_info': reasoning_info
         }
+
+    
+
+    def filter_config_dict(config_dict, config_class):
+        valid_keys = {field.name for field in fields(config_class)}
+        filtered = {k: v for k, v in config_dict.items() if k in valid_keys}
+        ignored = set(config_dict.keys()) - valid_keys
+        if ignored:
+            print(f"⚠️ Ignored unexpected config keys: {ignored}")
+        return filtered
     
     @classmethod
     def from_pretrained(cls, model_path: str) -> 'AkiaHRM':
