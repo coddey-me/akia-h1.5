@@ -71,6 +71,17 @@ def main():
     
     args = parser.parse_args()
     
+    # Setup W&B credentials automatically
+    try:
+        from setup_wandb import setup_wandb
+        if not args.wandb_disabled:
+            wandb_success = setup_wandb()
+            if not wandb_success:
+                print("⚠️  W&B setup failed, continuing without logging...")
+                args.wandb_disabled = True
+    except ImportError:
+        print("⚠️  W&B setup script not found, you may need to authenticate manually")
+    
     # Create output directory
     os.makedirs(args.output_dir, exist_ok=True)
     
