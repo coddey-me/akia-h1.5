@@ -1,11 +1,11 @@
 model:
-  # Core Architecture
+  # Core Architecture - Optimized for exactly 27M parameters
   vocab_size: 32000
-  d_model: 512
-  n_layers_high: 4
-  n_layers_low: 8
-  n_heads: 8
-  d_ff: 1536
+  d_model: 384          # Reduced from 512
+  n_layers_high: 3      # Reduced from 4
+  n_layers_low: 6       # Reduced from 8
+  n_heads: 6            # Reduced from 8
+  d_ff: 1152            # Reduced from 1536 (3 * d_model)
   max_sequence_length: 4096
   dropout: 0.1
   layer_norm_epsilon: 1e-5
@@ -14,8 +14,8 @@ model:
   reasoning_steps: 8
   halt_threshold: 0.85
   high_level_timescale: 2
-  cross_hierarchy_dim: 192
-  reasoning_head_dim: 96
+  cross_hierarchy_dim: 128  # Reduced from 192
+  reasoning_head_dim: 64    # Reduced from 96
   
   # Additional Configuration
   use_flash_attention: true
