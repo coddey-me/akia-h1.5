@@ -413,10 +413,17 @@ class AkiaHRM(nn.Module):
     
     @classmethod
     def from_pretrained(cls, model_path: str) -> 'AkiaHRM':
-        checkpoint = torch.load(model_path, map_location='cpu')
-        config = AkiaHRMConfig(**checkpoint['config'])
+        checkpoint = torch.load(model_path, map_location="cpu")
+        config_dict = checkpoint.get("config", {})
+        filtered_config = AkiaHRMConfig.filter_config_dict(config_dict)
+        config = AkiaHRMConfig(**filtered_config)
         model = cls(config)
-        model.load_state_dict(checkpoint['model_state_dict'])
+
+        state_dict = checkpoint.get("model_state_dict", checkpoint)
+        if any(key.startswith("module.") for key in state_dict.keys()):
+            state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
+        
+        model.load_state_dict(state_dict)
         return model
 
     
