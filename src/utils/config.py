@@ -42,7 +42,7 @@ def load_model_config(config_dir: str = "config") -> Dict[str, Any]:
     """Load model configuration with defaults"""
     config_dir = Path(config_dir)
     
-    # Default model configuration
+    # Default model configuration - only AkiaHRMConfig parameters
     default_config = {
         'vocab_size': 32000,
         'd_model': 512,
@@ -52,12 +52,17 @@ def load_model_config(config_dir: str = "config") -> Dict[str, Any]:
         'd_ff': 1536,
         'max_sequence_length': 4096,
         'dropout': 0.1,
+        'layer_norm_epsilon': 1e-5,
         'reasoning_steps': 8,
         'halt_threshold': 0.85,
+        'use_flash_attention': True,
         'high_level_timescale': 2,
         'cross_hierarchy_dim': 192,
         'reasoning_head_dim': 96
     }
+    
+    # Valid AkiaHRMConfig parameters
+    valid_params = set(default_config.keys())
     
     # Try to load from file
     model_config_path = config_dir / "model_config.yaml"
@@ -65,7 +70,20 @@ def load_model_config(config_dir: str = "config") -> Dict[str, Any]:
         file_config = load_config(model_config_path)
         if 'model' in file_config:
             file_config = file_config['model']
-        return merge_configs(default_config, file_config)
+        
+        # Filter to only valid parameters
+        filtered_config = {k: v for k, v in file_config.items() if k in valid_params}
+        merged_config = merge_configs(default_config, filtered_config)
+        
+        # Ensure critical float values are actually floats
+        if 'layer_norm_epsilon' in merged_config:
+            merged_config['layer_norm_epsilon'] = float(merged_config['layer_norm_epsilon'])
+        if 'dropout' in merged_config:
+            merged_config['dropout'] = float(merged_config['dropout'])
+        if 'halt_threshold' in merged_config:
+            merged_config['halt_threshold'] = float(merged_config['halt_threshold'])
+            
+        return merged_config
     else:
         print("Model config file not found, using defaults")
         return default_config
