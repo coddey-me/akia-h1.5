@@ -4,7 +4,10 @@ Standalone inference script for Akia HRM
 Usage:
   python inference_standalone.py --model-path checkpoints/final_model.pt --prompt "Your question here"
 """
+from pathlib import Path
 
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import argparse
 import torch
 from model.hrm_architecture import AkiaHRM  # Adjust import as necessary
