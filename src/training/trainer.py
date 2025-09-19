@@ -186,13 +186,18 @@ class AkiaTrainer:
             'epoch': self.epoch,
             'global_step': self.global_step,
             'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict(),
             'best_loss': self.best_loss,
             'config': self.config
         }
         
-        if self.use_amp:
+        # Only save optimizer and scheduler if they exist
+        if hasattr(self, 'optimizer') and self.optimizer is not None:
+            checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
+        
+        if hasattr(self, 'scheduler') and self.scheduler is not None:
+            checkpoint['scheduler_state_dict'] = self.scheduler.state_dict()
+        
+        if self.use_amp and hasattr(self, 'scaler') and self.scaler is not None:
             checkpoint['scaler_state_dict'] = self.scaler.state_dict()
         
         torch.save(checkpoint, save_path)
