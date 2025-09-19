@@ -18,12 +18,12 @@ Akia is a **27-million parameter Hierarchical Reasoning Model** based on cutting
 ## 🏗️ Architecture Overview
 
 ```
-Akia HRM Architecture (27M Parameters)
-├── High-Level Planning Module (6 layers)
+Akia HRM Architecture (39M Parameters)
+├── High-Level Planning Module (4 layers)
 │   ├── Abstract reasoning and strategic planning
 │   ├── Long-term context management
 │   └── Goal decomposition
-├── Low-Level Execution Module (12 layers)
+├── Low-Level Execution Module (6 layers)
 │   ├── Rapid detailed computations
 │   ├── Code generation and debugging
 │   └── Immediate response synthesis
@@ -49,7 +49,7 @@ Akia HRM Architecture (27M Parameters)
 ### Installation
 
 ```bash
-git clone https://github.com/coddey-me/akia-h1.4.git
+git clone https://github.com/coddey-me/akia-h1.5.git
 cd akia-h1.4
 pip install -e .
 ```
@@ -81,7 +81,7 @@ response = model.generate(
 ## 📁 Repository Structure
 
 ```
-akia-h1.4/
+akia-h1.5/
 ├── src/                    # Source code
 │   ├── model/             # HRM architecture implementation
 │   ├── training/          # Training utilities and optimizers
@@ -139,16 +139,12 @@ akia-h1.4/
 - **Phase 3** (Q3 2024): Specialized domain modules (legal, medical, financial)
 - **Phase 4** (Q4 2024): Real-time learning and adaptation capabilities
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](docs/CONTRIBUTING.md) for details.
-
 ### Development Setup
 
 ```bash
 # Clone and install development dependencies
-git clone https://github.com/coddey-me/akia-h1.4.git
-cd akia-h1.4
+git clone https://github.com/coddey-me/akia-h1.5.git
+cd akia-h1.5
 pip install -e ".[dev]"
 
 # Run tests
@@ -177,11 +173,11 @@ isort src/ tests/
 ## 📝 Citation
 
 ```bibtex
-@software{akia_hrm_2024,
+@software{akia_hrm_2025,
   title={Akia: Hierarchical Reasoning Model for Efficient AI},
   author={Akia Team},
-  year={2024},
-  url={https://github.com/coddey-me/akia-h1.4},
+  year={2025},
+  url={https://github.com/coddey-me/akia-h1.5},
   note={Based on Sapient Intelligence HRM research}
 }
 
@@ -192,11 +188,7 @@ isort src/ tests/
   year={2024}
 }
 ```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
+ 
 ## 🌟 Acknowledgments
 
 - **Sapient Intelligence** for the groundbreaking HRM architecture
