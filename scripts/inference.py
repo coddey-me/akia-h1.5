@@ -107,6 +107,7 @@ def interactive_mode(model, tokenizer, device):
         try:
             # Get user input
             prompt = "hello"
+            prompt.strip()
             
             if not prompt:
                 continue
