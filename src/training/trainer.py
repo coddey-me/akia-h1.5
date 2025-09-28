@@ -76,7 +76,10 @@ class AkiaTrainer:
         )
         
         # Setup scheduler
-        total_steps = len(train_dataloader) * self.config.get('max_epochs', 5)
+        gradient_accumulation_steps = self.config.get('gradient_accumulation_steps', 1)
+        optimizer_updates_per_epoch = math.ceil(len(train_dataloader) / gradient_accumulation_steps)
+        total_steps = optimizer_updates_per_epoch * self.config.get('max_epochs', 5)
+
         warmup_steps = self.config.get('warmup_steps', 10)
         
         self.scheduler = CosineAnnealingLR(
