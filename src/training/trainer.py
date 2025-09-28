@@ -81,7 +81,7 @@ class AkiaTrainer:
         gradient_accumulation_steps = self.config.get('gradient_accumulation_steps', 1)
         micro_batches_per_epoch = len(train_dataloader)
         optimizer_updates_per_epoch = math.ceil(micro_batches_per_epoch / gradient_accumulation_steps)
-        total_steps = optimizer_updates_per_epoch * self.config.get('max_epochs', 5)
+        total_steps = optimizer_updates_per_epoch * self.config.get('max_epochs', 3)
 
 
         warmup_steps = self.config.get('warmup_steps', 10)
@@ -295,7 +295,7 @@ class AkiaTrainer:
             )
         
         # Training loop
-        max_epochs = self.config.get('max_epochs', 5)
+        max_epochs = self.config.get('max_epochs', 3)
         gradient_accumulation_steps = self.config.get('gradient_accumulation_steps', 4)
         eval_steps = self.config.get('eval_steps', 50)
         save_steps = self.config.get('save_steps', 100)
