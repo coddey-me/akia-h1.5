@@ -77,8 +77,9 @@ class AkiaTrainer:
         
         # Setup scheduler
         gradient_accumulation_steps = self.config.get('gradient_accumulation_steps', 1)
-        optimizer_updates_per_epoch = math.ceil(len(train_dataloader) / gradient_accumulation_steps)
-        total_steps = optimizer_updates_per_epoch * self.config.get('max_epochs', 5)
+        updates_per_epoch = ceil(total_samples / (batch_size * gradient_accumulation_steps))
+
+        total_steps = updates_per_epoch * self.config.get('max_epochs', 5)
 
         warmup_steps = self.config.get('warmup_steps', 10)
         
