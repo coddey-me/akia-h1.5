@@ -166,9 +166,9 @@ def create_default_configs(config_dir: str = "config"):
             'learning_rate': 1e-4,
             'min_learning_rate': 1e-6,
             'weight_decay': 0.01,
-            'max_epochs': 25,
-            'eval_steps': 250,
-            'save_steps': 500,
+            'max_epochs': 5,
+            'eval_steps': 50,
+            'save_steps': 100,
             'mixed_precision': True,
             'use_wandb': True,
             'wandb_project': 'akia-hrm'
