@@ -4,7 +4,7 @@ training:
   data_path: "data/processed/akia_training_data.pkl"
   
   # Batch Configuration - Reduced for memory
-  batch_size: 2                # Reduced from 8 to 2
+  batch_size: 8                # Reduced from 8 to 2
   gradient_accumulation_steps: 16  # Increased to maintain effective batch size
   effective_batch_size: 32
   
@@ -17,7 +17,7 @@ training:
   epsilon: 0.00000001          # 1e-8 as float
   
   # Training Schedule
-  max_epochs: 5
+  max_epochs: 3
   warmup_steps: 50
   
   # Evaluation and Logging
