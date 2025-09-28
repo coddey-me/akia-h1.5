@@ -76,8 +76,8 @@ class AkiaTrainer:
         )
         
         # Setup scheduler
-        total_steps = len(train_dataloader) * self.config.get('max_epochs', 25)
-        warmup_steps = self.config.get('warmup_steps', 500)
+        total_steps = len(train_dataloader) * self.config.get('max_epochs', 5)
+        warmup_steps = self.config.get('warmup_steps', 10)
         
         self.scheduler = CosineAnnealingLR(
             self.optimizer,
@@ -288,11 +288,11 @@ class AkiaTrainer:
             )
         
         # Training loop
-        max_epochs = self.config.get('max_epochs', 25)
+        max_epochs = self.config.get('max_epochs', 5)
         gradient_accumulation_steps = self.config.get('gradient_accumulation_steps', 4)
-        eval_steps = self.config.get('eval_steps', 250)
-        save_steps = self.config.get('save_steps', 500)
-        logging_steps = self.config.get('logging_steps', 50)
+        eval_steps = self.config.get('eval_steps', 50)
+        save_steps = self.config.get('save_steps', 100)
+        logging_steps = self.config.get('logging_steps', 10)
         
         for epoch in range(max_epochs):
             self.epoch = epoch
