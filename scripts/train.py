@@ -101,7 +101,7 @@ def main():
     if args.debug:
         print("🐛 Debug mode enabled")
         training_config.update({
-            'max_epochs': 2,
+            'max_epochs': 5,
             'eval_steps': 10,
             'save_steps': 30,
             'logging_steps': 5,
