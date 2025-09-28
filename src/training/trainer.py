@@ -9,6 +9,8 @@ import math
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 from tqdm.auto import tqdm
+import math
+
 
 class AkiaTrainer:
     """Main trainer for Akia HRM model"""
@@ -77,7 +79,7 @@ class AkiaTrainer:
         
         # Setup scheduler
         gradient_accumulation_steps = self.config.get('gradient_accumulation_steps', 1)
-        updates_per_epoch = ceil(total_samples / (batch_size * gradient_accumulation_steps))
+        updates_per_epoch = math.ceil(total_samples / (batch_size * gradient_accumulation_steps))
 
         total_steps = updates_per_epoch * self.config.get('max_epochs', 5)
 
