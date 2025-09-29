@@ -106,12 +106,12 @@ def main():
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    # load model + tokenizer (don’t pass device here)
     model, tokenizer, _, config = load_model_and_tokenizer(
         args.model_path,
-        tokenizer_path=args.tokenizer_path,
-        device,
+        args.tokenizer_path,
+        device
     )
+
 
     model.to(device)
 
