@@ -259,9 +259,12 @@ class AkiaTrainer:
   # import the helper
     
     def save_checkpoint(self, save_path: str, is_best: bool = False):
-        """Save training checkpoint asynchronously with CPU tensors"""
-        # 1. Move model state to CPU first (avoid GPU sync penalty)
-        model_state = {k: v.detach().cpu() for k, v in self.model.state_dict().items()}
+        """Save training checkpoint asynchronously with CPU tensors and fp16 weights"""
+        # 1. Move model state to CPU and cast to fp16 to cut file size ~50%
+        model_state = {
+            k: v.detach().to(torch.float16).cpu()  # <<— FP16 conversion here
+            for k, v in self.model.state_dict().items()
+        }
     
         checkpoint = {
             'epoch': self.epoch,
@@ -270,15 +273,16 @@ class AkiaTrainer:
             'best_loss': self.best_loss,
             'config': self.config
         }
-
-    # 2. Optimizer / scheduler / scaler moved to CPU if present
+    
+        # 2. Optimizer / scheduler / scaler moved to CPU if present
+        # (optionally skip optimizer/scheduler to make it even faster)
         if hasattr(self, 'optimizer') and self.optimizer is not None:
             opt_state = self.optimizer.state_dict()
             checkpoint['optimizer_state_dict'] = {
                 k: (v.cpu() if isinstance(v, torch.Tensor) else v)
                 for k, v in opt_state.items()
             }
-    
+
         if hasattr(self, 'scheduler') and self.scheduler is not None:
             sched_state = self.scheduler.state_dict()
             checkpoint['scheduler_state_dict'] = {
@@ -287,7 +291,7 @@ class AkiaTrainer:
             }
     
         if self.use_amp and hasattr(self, 'scaler') and self.scaler is not None:
-            checkpoint['scaler_state_dict'] = self.scaler.state_dict()  # scaler small already
+            checkpoint['scaler_state_dict'] = self.scaler.state_dict()
     
         # 3. Asynchronous save
         async_torch_save(checkpoint, save_path)
@@ -296,7 +300,8 @@ class AkiaTrainer:
             best_path = str(Path(save_path).parent / 'best_model.pt')
             async_torch_save(checkpoint, best_path)
     
-        print(f"Async checkpoint triggered: {save_path}")
+        print(f"Async checkpoint triggered (fp16 weights): {save_path}")
+
 
     def save_previous_checkpoint(self, save_path: str, is_best: bool = False):
         """Save training checkpoint"""
