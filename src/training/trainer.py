@@ -485,8 +485,33 @@ class AkiaTrainer:
         
         if self.config.get('use_wandb', True):
             wandb.finish()
-    
+            
+    @torch.inference_mode()  # Faster than no_grad for full function
     def validate(self, val_dataloader) -> Dict[str, float]:
+        """Run validation efficiently"""
+        self.model.eval()
+    
+        total_val_loss = 0.0
+        total_val_steps = 0
+        all_metrics = []
+    
+        # Faster tqdm refresh rate (less console I/O)
+        for batch in tqdm(val_dataloader, desc="Validation", leave=False, mininterval=1.0):
+            metrics = self.validation_step(batch)
+            all_metrics.append(metrics)
+            total_val_loss += metrics['val_total_loss']
+            total_val_steps += 1
+    
+        # Vectorized aggregation
+        keys = all_metrics[0].keys()
+        avg_metrics = {k: sum(m[k] for m in all_metrics) / len(all_metrics) for k in keys}
+    
+        print(f"Validation - Loss: {avg_metrics['val_loss']:.4f}, Perplexity: {avg_metrics['val_perplexity']:.2f}")
+    
+        self.model.train()  # switch back to training mode
+        return avg_metrics
+
+    def validateprev(self, val_dataloader) -> Dict[str, float]:
         """Run validation"""
         self.model.eval()
         
