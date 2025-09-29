@@ -216,7 +216,7 @@ class AkiaTrainer:
         else:
             # no AMP, just a dummy context manager
             from contextlib import nullcontext
-            amp_ctx = nullcontext()def validation_step(self, batch) -> Dict[str, float]:
+            amp_ctx = nullcontext()
         return metrics
 
         with amp_ctx:
