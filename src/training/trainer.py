@@ -192,8 +192,50 @@ class AkiaTrainer:
         }
         
         return metrics
-    
+    @torch.no_grad()  # Automatically disables gradients
     def validation_step(self, batch) -> Dict[str, float]:
+        """Fast single validation step with mixed precision support."""
+        # --- Do NOT call self.model.eval() every step ---
+        # Instead, switch to eval mode once outside your loop before calling validation_step
+        # If you must keep it here:
+        # self.model.eval()
+    
+        # --- Move tensors to device asynchronously ---
+        input_ids = batch['input_ids'].to(self.device, non_blocking=True)
+        labels = batch['labels'].to(self.device, non_blocking=True)
+    
+        # --- Mixed precision context ---
+        amp_context = (
+            torch.cuda.amp.autocast if self.device.type == 'cuda' else torch.cpu.amp.autocast
+        ) if self.use_amp else torch.no_grad
+    
+        with amp_context():
+            outputs = self.model(
+                input_ids=input_ids,
+                labels=labels,
+                reasoning_steps=self.config.get('reasoning_steps_eval', 8)
+            )
+
+        # --- Extract values safely ---
+        loss_val = outputs.get('loss', torch.tensor(0.0)).item()
+        total_loss_val = outputs.get('total_loss', torch.tensor(0.0)).item()
+        steps_taken = outputs.get('reasoning_steps_taken', 0)
+    
+        # Compute perplexity safely
+        if loss_val < 10:
+            perplexity = math.exp(loss_val)
+        else:
+            perplexity = float('inf')
+    
+        return {
+            'val_loss': loss_val,
+            'val_total_loss': total_loss_val,
+            'val_reasoning_steps': steps_taken,
+            'val_perplexity': perplexity
+        }
+
+
+    def validation_previousstep(self, batch) -> Dict[str, float]:
         """Single validation step"""
         self.model.eval()
         
