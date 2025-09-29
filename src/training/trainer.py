@@ -207,20 +207,20 @@ class AkiaTrainer:
                     outputs = self.model(
                         input_ids=input_ids,
                         labels=labels,
-                        reasoning_steps=self.config.get('reasoning_steps_eval', 8)
+                        reasoning_steps=self.config.get('reasoning_steps_eval', 4)
                     )
             except (AttributeError, TypeError):
                 with torch.cuda.amp.autocast():
                     outputs = self.model(
                         input_ids=input_ids,
                         labels=labels,
-                        reasoning_steps=self.config.get('reasoning_steps_eval', 8)
+                        reasoning_steps=self.config.get('reasoning_steps_eval', 4)
                     )
         else:
             outputs = self.model(
                 input_ids=input_ids,
                 labels=labels,
-                reasoning_steps=self.config.get('reasoning_steps_eval', 8)
+                reasoning_steps=self.config.get('reasoning_steps_eval', 4)
             )
     
         # ✅ DEFINE metrics here
