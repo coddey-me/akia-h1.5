@@ -96,16 +96,17 @@ def main():
     parser.add_argument('--top-k', type=int, default=50)
     parser.add_argument('--top-p', type=float, default=0.9)
     parser.add_argument('--reasoning-steps', type=int, default=8)
-
     args = parser.parse_args()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model, tokenizer, device, config = load_model_and_tokenizer(
+    # load model + tokenizer (don’t pass device here)
+    model, tokenizer, _, config = load_model_and_tokenizer(
         args.model_path,
-        args.tokenizer_path,
-        device
+        tokenizer_path=args.tokenizer_path
     )
+
+    model.to(device)
 
     print(f"\nPrompt: {args.prompt}\n")
     response = generate_response(
@@ -117,6 +118,7 @@ def main():
         reasoning_steps=args.reasoning_steps,
     )
     print(f"Model response:\n{response}\n")
+
 
 
 if __name__ == '__main__':
