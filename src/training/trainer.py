@@ -192,40 +192,47 @@ class AkiaTrainer:
         }
         
         return metrics
-    @torch.no_grad()  # Automatically disables gradients
+     
+
+    @torch.inference_mode()
     def validation_step(self, batch) -> Dict[str, float]:
-        """Fast single validation step with mixed precision support."""
-        # --- Do NOT call self.model.eval() every step ---
-        # Instead, switch to eval mode once outside your loop before calling validation_step
-        # If you must keep it here:
-        # self.model.eval()
+        """
+        Single validation step (optimized):
+        - Uses inference_mode() (faster than no_grad)
+        - Non-blocking GPU transfers
+        - Handles AMP automatically
+        """
     
-        # --- Move tensors to device asynchronously ---
+        # Move batch to device efficiently
         input_ids = batch['input_ids'].to(self.device, non_blocking=True)
         labels = batch['labels'].to(self.device, non_blocking=True)
     
-        # --- Mixed precision context ---
-        amp_context = (
-            torch.cuda.amp.autocast if self.device.type == 'cuda' else torch.cpu.amp.autocast
-        ) if self.use_amp else torch.no_grad
-    
-        with amp_context():
+        # Pick correct autocast context
+        if self.use_amp and self.device.type == 'cuda':
+            try:
+                amp_ctx = torch.amp.autocast('cuda')
+            except (AttributeError, TypeError):
+                amp_ctx = torch.cuda.amp.autocast()
+        else:
+            # no AMP, just a dummy context manager
+            from contextlib import nullcontext
+            amp_ctx = nullcontext()def validation_step(self, batch) -> Dict[str, float]:
+        return metrics
+
+        with amp_ctx:
             outputs = self.model(
                 input_ids=input_ids,
                 labels=labels,
                 reasoning_steps=self.config.get('reasoning_steps_eval', 8)
             )
-
-        # --- Extract values safely ---
-        loss_val = outputs.get('loss', torch.tensor(0.0)).item()
-        total_loss_val = outputs.get('total_loss', torch.tensor(0.0)).item()
-        steps_taken = outputs.get('reasoning_steps_taken', 0)
     
-        # Compute perplexity safely
-        if loss_val < 10:
-            perplexity = math.exp(loss_val)
-        else:
-            perplexity = float('inf')
+        # Extract losses safely
+        loss_val = float(outputs.get('loss', 0.0))
+        total_loss_val = float(outputs.get('total_loss', 0.0))
+        steps_taken = int(outputs.get('reasoning_steps_taken', 0))
+    
+        # Only compute perplexity if loss is reasonable
+        perplexity = math.exp(loss_val) if loss_val < 10 else float('inf')
     
         return {
             'val_loss': loss_val,
@@ -233,6 +240,7 @@ class AkiaTrainer:
             'val_reasoning_steps': steps_taken,
             'val_perplexity': perplexity
         }
+
 
 
     def validation_previousstep(self, batch) -> Dict[str, float]:
