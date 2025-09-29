@@ -103,7 +103,7 @@ def main():
         training_config.update({
             'max_epochs': 5,
             'eval_steps': 10,
-            'save_steps': 30,
+            'save_steps': 600,
             'logging_steps': 5,
             'batch_size': 2,
             'gradient_accumulation_steps': 2
