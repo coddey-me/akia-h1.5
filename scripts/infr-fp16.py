@@ -18,46 +18,72 @@ from model.hrm_architecture import AkiaHRM, AkiaHRMConfig
 from utils.tokenizer import SimpleTokenizer
 
 def load_model_and_tokenizer(model_path, tokenizer_path, device):
-    """Load model + tokenizer with optional config.json fallback"""
-    # Determine config path based on model_path folder
-    config_path = os.path.join(os.path.dirname(model_path), "config.json")
+    """
+    Load AkiaHRM model and tokenizer from a state_dict checkpoint or full checkpoint.
+    """
+    import os, json, torch
+    from model.hrm_architecture import AkiaHRM, AkiaHRMConfig
+    from tokenizer import SimpleTokenizer  # adjust to your path
 
+    # -------------------------
+    # 1. Config
+    # -------------------------
+    config_path = os.path.join(os.path.dirname(model_path), "config.json")
     if os.path.exists(config_path):
-        # Load config from file
         with open(config_path, "r") as f:
             config_dict = json.load(f)
         print(f"Loaded config from {config_path}")
         model_config = AkiaHRMConfig(**config_dict)
     else:
-        # Fallback to default AkiaHRMConfig
         print("⚠️ Config file not found, using default AkiaHRMConfig")
         model_config = AkiaHRMConfig()
 
-    # Load tokenizer
-    tokenizer = SimpleTokenizer.from_pretrained(tokenizer_path)
+    # -------------------------
+    # 2. Tokenizer
+    # -------------------------
+    try:
+        with open(tokenizer_path, "r") as f:
+            vocab = json.load(f)
+        tokenizer = SimpleTokenizer(vocab)
+        print(f"Vocabulary loaded from {tokenizer_path}")
+        print(f"Vocabulary size: {len(vocab)}")
+    except Exception as e:
+        raise RuntimeError(f"Could not load tokenizer at {tokenizer_path}: {e}")
 
-    # Build model
+    # -------------------------
+    # 3. Model skeleton
+    # -------------------------
     model = AkiaHRM(model_config)
-    state_dict = torch.load(model_path, map_location=device)
-
-    # Handle whether you saved as full checkpoint or just model.state_dict
-    if "model_state_dict" in state_dict:
-        model.load_state_dict(state_dict["model_state_dict"], strict=False)
-    else:
-        model.load_state_dict(state_dict, strict=False)
-
     model.to(device)
 
-    # (Optional) FP16
+    # -------------------------
+    # 4. Load state dict
+    # -------------------------
+    print(f"Loading weights from {model_path} ...")
+    state_dict = torch.load(model_path, map_location=device)
+
+    # If full checkpoint
+    if isinstance(state_dict, dict) and "model_state_dict" in state_dict:
+        state_dict = state_dict["model_state_dict"]
+
+    # Load into model
+    missing, unexpected = model.load_state_dict(state_dict, strict=False)
+    if missing:
+        print(f"⚠️ Missing keys: {missing[:5]} ...")
+    if unexpected:
+        print(f"⚠️ Unexpected keys: {unexpected[:5]} ...")
+
+    # -------------------------
+    # 5. FP16 optional
+    # -------------------------
     try:
         model = model.half()
     except Exception as e:
         print(f"FP16 conversion failed: {e}")
 
     model.eval()
+
     return model, tokenizer, device, model_config
-
-
 
 @torch.inference_mode()
 def generate_response(model,
