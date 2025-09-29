@@ -18,25 +18,31 @@ from model.hrm_architecture import AkiaHRM, AkiaHRMConfig
 from utils.tokenizer import SimpleTokenizer  # adjust path if needed
 
 
-def load_model_and_tokenizer(model_path, config_path=None):
+def load_model_and_tokenizer(model_path, tokenizer_path=None, config_path=None):
     # Load config
     if config_path is None:
         config_path = Path(model_path).parent / "config.json"
     config = AkiaHRMConfig.from_json_file(config_path)
 
-    # Recreate model from config
+    # Build model
     model = AkiaHRM(config)
 
-    # Load the weights (state dict)
+    # Load state dict
     state_dict = torch.load(model_path, map_location='cpu')
     model.load_state_dict(state_dict)
 
-    tokenizer = SimpleTokenizer.from_pretrained("path_or_name")
+    # Tokenizer (if you really have a path)
+    if tokenizer_path is None:
+        tokenizer = SimpleTokenizer.from_pretrained("path_or_name")
+    else:
+        tokenizer = SimpleTokenizer.from_pretrained(tokenizer_path)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model.eval()
 
     return model, tokenizer, device, config
+
 
 
 
