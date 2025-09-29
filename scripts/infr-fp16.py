@@ -18,46 +18,26 @@ from model.hrm_architecture import AkiaHRM, AkiaHRMConfig
 from utils.tokenizer import SimpleTokenizer  # adjust path if needed
 
 
-def load_model_and_tokenizer(model_path: str,
-                             tokenizer_path: str,
-                             device: torch.device):
-    """Load model + tokenizer robustly from checkpoint"""
-    print(f"Loading model from checkpoint: {model_path}")
-    checkpoint = torch.load(model_path, map_location='cpu')
+def load_model_and_tokenizer(model_path, config_path=None):
+    # Load config
+    if config_path is None:
+        config_path = Path(model_path).parent / "config.json"
+    config = AkiaHRMConfig.from_json_file(config_path)
 
-    # --- Get config ---
-    raw_config_dict = checkpoint.get('config', {})
-    filtered_config_dict = AkiaHRMConfig.filter_config_dict(raw_config_dict)
-    config = AkiaHRMConfig(**filtered_config_dict)
-
-    # --- Decide state_dict format ---
-    if 'model_state_dict' in checkpoint:
-        state_dict = checkpoint['model_state_dict']
-    else:
-        state_dict = checkpoint
-
-    # Remove any 'module.' prefixes
-    if any(k.startswith('module.') for k in state_dict.keys()):
-        state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
-
-    # --- Build model ---
+    # Recreate model from config
     model = AkiaHRM(config)
 
-    # Some weights may be fp16, so cast model accordingly before or after load
-    try:
-        model.load_state_dict(state_dict)
-    except RuntimeError:
-        # if dtype mismatch, try half()
-        model = model.half()
-        model.load_state_dict(state_dict, strict=False)
+    # Load the weights (state dict)
+    state_dict = torch.load(model_path, map_location='cpu')
+    model.load_state_dict(state_dict)
 
+    tokenizer = SimpleTokenizer.from_pretrained("path_or_name")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model.eval()
 
-    print(f"Loading tokenizer from: {tokenizer_path}")
-    tokenizer = SimpleTokenizer.from_pretrained(tokenizer_path)
-
     return model, tokenizer, device, config
+
 
 
 @torch.inference_mode()
