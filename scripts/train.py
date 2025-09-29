@@ -102,8 +102,8 @@ def main():
         print("🐛 Debug mode enabled")
         training_config.update({
             'max_epochs': 5,
-            'eval_steps': 10,
-            'save_steps': 600,
+            'eval_steps': 500,
+            'save_steps': 500,
             'logging_steps': 5,
             'batch_size': 2,
             'gradient_accumulation_steps': 2
