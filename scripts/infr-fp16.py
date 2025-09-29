@@ -38,7 +38,7 @@ def load_model_and_tokenizer(model_path, tokenizer_path=None, config_path=None):
 
 
     # Initialize config object
-    config = AkiaHRMConfig(**config_path)
+    config = AkiaHRMConfig(**config_dict)
 
     # Build model
     model = AkiaHRM(config)
