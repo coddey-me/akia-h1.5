@@ -105,7 +105,7 @@ def main():
             'eval_steps': 500,
             'save_steps': 500,
             'logging_steps': 5,
-            'batch_size': 2,
+            'batch_size': 128,
             'gradient_accumulation_steps': 2
         })
     
