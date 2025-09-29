@@ -192,55 +192,48 @@ class AkiaTrainer:
         }
         
         return metrics
-     
 
     @torch.inference_mode()
     def validation_step(self, batch) -> Dict[str, float]:
-        """
-        Single validation step (optimized):
-        - Uses inference_mode() (faster than no_grad)
-        - Non-blocking GPU transfers
-        - Handles AMP automatically
-        """
+        """Fast validation step"""
+        self.model.eval()
     
-        # Move batch to device efficiently
         input_ids = batch['input_ids'].to(self.device, non_blocking=True)
         labels = batch['labels'].to(self.device, non_blocking=True)
     
-        # Pick correct autocast context
-        if self.use_amp and self.device.type == 'cuda':
+        if self.use_amp:
             try:
-                amp_ctx = torch.amp.autocast('cuda')
+                with torch.amp.autocast('cuda'):
+                    outputs = self.model(
+                        input_ids=input_ids,
+                        labels=labels,
+                        reasoning_steps=self.config.get('reasoning_steps_eval', 8)
+                    )
             except (AttributeError, TypeError):
-                amp_ctx = torch.cuda.amp.autocast()
+                with torch.cuda.amp.autocast():
+                    outputs = self.model(
+                        input_ids=input_ids,
+                        labels=labels,
+                        reasoning_steps=self.config.get('reasoning_steps_eval', 8)
+                    )
         else:
-            # no AMP, just a dummy context manager
-            from contextlib import nullcontext
-            amp_ctx = nullcontext()
-        return metrics
-
-        with amp_ctx:
             outputs = self.model(
                 input_ids=input_ids,
                 labels=labels,
                 reasoning_steps=self.config.get('reasoning_steps_eval', 8)
             )
     
-        # Extract losses safely
-        loss_val = float(outputs.get('loss', 0.0))
-        total_loss_val = float(outputs.get('total_loss', 0.0))
-        steps_taken = int(outputs.get('reasoning_steps_taken', 0))
-    
-        # Only compute perplexity if loss is reasonable
-        perplexity = math.exp(loss_val) if loss_val < 10 else float('inf')
-    
-        return {
-            'val_loss': loss_val,
-            'val_total_loss': total_loss_val,
-            'val_reasoning_steps': steps_taken,
-            'val_perplexity': perplexity
+        # ✅ DEFINE metrics here
+        loss_val = outputs.get('loss', 0.0)
+        total_loss_val = outputs.get('total_loss', loss_val)
+        metrics = {
+            'val_loss': float(loss_val),
+            'val_total_loss': float(total_loss_val),
+            'val_reasoning_steps': int(outputs.get('reasoning_steps_taken', 0)),
+            'val_perplexity': math.exp(float(loss_val)) if float(loss_val) < 10 else float('inf')
         }
-
+    
+        return metrics
 
 
     def validation_previousstep(self, batch) -> Dict[str, float]:
