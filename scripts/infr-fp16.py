@@ -23,7 +23,7 @@ def load_model_and_tokenizer(model_path, tokenizer_path, device):
     """
     import os, json, torch
     from model.hrm_architecture import AkiaHRM, AkiaHRMConfig
-    from tokenizer import SimpleTokenizer  # adjust to your path
+    from utils.tokenizer import SimpleTokenizer  # adjust to your path
 
     # -------------------------
     # 1. Config
