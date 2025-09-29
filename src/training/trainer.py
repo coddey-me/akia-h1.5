@@ -119,10 +119,10 @@ class AkiaTrainer:
         
         val_dataloader = DataLoader(
             val_dataset,
-            batch_size=self.config.get('batch_size', 8),
+            batch_size=self.config.get('batch_size', 128),
             shuffle=False,
             collate_fn=collator,
-            num_workers=self.config.get('dataloader_num_workers', 2),
+            num_workers=self.config.get('dataloader_num_workers', 4),
             pin_memory=self.config.get('pin_memory', True)
         )
         
@@ -479,30 +479,31 @@ class AkiaTrainer:
         if self.config.get('use_wandb', True):
             wandb.finish()
             
-    @torch.inference_mode()  # Faster than no_grad for full function
     def validate(self, val_dataloader) -> Dict[str, float]:
-        """Run validation efficiently"""
+        """Run validation on a subsample for speed"""
         self.model.eval()
     
-        total_val_loss = 0.0
-        total_val_steps = 0
+        # 🔹 Subsample: only first 100 batches
+        max_batches = int(0.1 * len(val_dataloader))
         all_metrics = []
     
-        # Faster tqdm refresh rate (less console I/O)
-        for batch in tqdm(val_dataloader, desc="Validation", leave=False, mininterval=1.0):
-            metrics = self.validation_step(batch)
-            all_metrics.append(metrics)
-            total_val_loss += metrics['val_total_loss']
-            total_val_steps += 1
+        with torch.inference_mode():
+            for i, batch in enumerate(tqdm(val_dataloader, desc="Validation", leave=False)):
+                if i >= max_batches:  # early stop
+                    break
+                metrics = self.validation_step(batch)
+                all_metrics.append(metrics)
     
-        # Vectorized aggregation
-        keys = all_metrics[0].keys()
-        avg_metrics = {k: sum(m[k] for m in all_metrics) / len(all_metrics) for k in keys}
+        # Aggregate metrics
+        avg_metrics = {}
+        for key in all_metrics[0].keys():
+            avg_metrics[key] = sum(m[key] for m in all_metrics) / len(all_metrics)
     
-        print(f"Validation - Loss: {avg_metrics['val_loss']:.4f}, Perplexity: {avg_metrics['val_perplexity']:.2f}")
+        print(f"Validation (subset) - Loss: {avg_metrics['val_loss']:.4f}, "
+              f"Perplexity: {avg_metrics['val_perplexity']:.2f}")
     
-        self.model.train()  # switch back to training mode
         return avg_metrics
+
 
     def validateprev(self, val_dataloader) -> Dict[str, float]:
         """Run validation"""
