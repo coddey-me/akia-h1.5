@@ -26,8 +26,15 @@ def load_model_and_tokenizer(model_path, tokenizer_path=None, config_path=None):
         config_path = Path(model_path).parent / "config.json"
 
     # Load config dict manually
-    with open(config_path, "r") as f:
-        config_dict = json.load(f)
+        # Try to load config.json, else use default
+    if config_path and os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            config = json.load(f)
+        model_config = AkiaHRMConfig(**config)
+    else:
+        print("⚠️ Config file not found, using default AkiaHRMConfig")
+        model_config = AkiaHRMConfig()  # default params
+
 
     # Initialize config object
     config = AkiaHRMConfig(**config_dict)
