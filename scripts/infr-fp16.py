@@ -1,85 +1,86 @@
 #!/usr/bin/env python3
 """
-Standalone inference script for Akia HRM
-Usage example:
-  python inference_standalone.py --model-path checkpoints/final_model.pt --prompt "What is AI?"
+Standalone inference script for Akia HRM (handles FP16 + mixed checkpoint formats)
+
+Usage:
+  python infr-fp16.py --model-path checkpoints/final_model.pt --prompt "Your question here"
 """
 
 import argparse
-from pathlib import Path
-import sys
 import torch
-
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
+from pathlib import Path
 from model.hrm_architecture import AkiaHRM, AkiaHRMConfig
-from utils.tokenizer import SimpleTokenizer  # adjust import as needed
+from utils.tokenizer import SimpleTokenizer  # adjust path if needed
 
 
-def load_model_and_tokenizer(model_path: str, tokenizer_path: str = "tokenizer_vocab.json", use_fp16: bool = False):
-    """Load Akia HRM model + tokenizer with FP16/FP32 handling."""
+def load_model_and_tokenizer(model_path: str,
+                             tokenizer_path: str,
+                             device: torch.device):
+    """Load model + tokenizer robustly from checkpoint"""
     print(f"Loading model from checkpoint: {model_path}")
     checkpoint = torch.load(model_path, map_location='cpu')
 
-    # --- Filter config keys ---
+    # --- Get config ---
     raw_config_dict = checkpoint.get('config', {})
     filtered_config_dict = AkiaHRMConfig.filter_config_dict(raw_config_dict)
     config = AkiaHRMConfig(**filtered_config_dict)
 
-    # --- Load state dict ---
-    state_dict = checkpoint.get('model_state_dict', checkpoint)
+    # --- Decide state_dict format ---
+    if 'model_state_dict' in checkpoint:
+        state_dict = checkpoint['model_state_dict']
+    else:
+        state_dict = checkpoint
+
+    # Remove any 'module.' prefixes
     if any(k.startswith('module.') for k in state_dict.keys()):
         state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
 
-    if use_fp16:
-        # Keep fp16 weights, convert model to half precision later
-        pass
-    else:
-        # Convert weights to fp32 (safe default)
-        state_dict = {
-            k: (v.float() if torch.is_floating_point(v) else v)
-            for k, v in state_dict.items()
-        }
-
     # --- Build model ---
     model = AkiaHRM(config)
-    model.load_state_dict(state_dict)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # Some weights may be fp16, so cast model accordingly before or after load
+    try:
+        model.load_state_dict(state_dict)
+    except RuntimeError:
+        # if dtype mismatch, try half()
+        model = model.half()
+        model.load_state_dict(state_dict, strict=False)
 
-    if use_fp16:
-        model.half()  # keep model in half precision
-
-    model.eval()
     model.to(device)
+    model.eval()
 
     print(f"Loading tokenizer from: {tokenizer_path}")
     tokenizer = SimpleTokenizer.from_pretrained(tokenizer_path)
 
-    return model, tokenizer, device
+    return model, tokenizer, device, config
 
 
-def generate_response(model, tokenizer, device, prompt, max_length=256,
-                      temperature=0.8, top_k=50, top_p=0.9, reasoning_steps=8):
-    """Generate text response from the model given a prompt."""
+@torch.inference_mode()
+def generate_response(model,
+                      tokenizer,
+                      device,
+                      prompt,
+                      max_length=256,
+                      temperature=0.8,
+                      top_k=50,
+                      top_p=0.9,
+                      reasoning_steps=8):
+    """Generate text from model given a prompt"""
     input_tokens = tokenizer.encode(prompt)
     input_ids = torch.tensor([input_tokens], dtype=torch.long).to(device)
 
-    with torch.no_grad():
-        outputs = model.generate(
-            input_ids=input_ids,
-            max_length=max_length,
-            temperature=temperature,
-            top_k=top_k,
-            top_p=top_p,
-            reasoning_steps=reasoning_steps,
-        )
-
+    outputs = model.generate(
+        input_ids=input_ids,
+        max_length=max_length,
+        temperature=temperature,
+        top_k=top_k,
+        top_p=top_p,
+        reasoning_steps=reasoning_steps,
+    )
     generated_ids = outputs['generated_ids'][0]
     response = tokenizer.decode(generated_ids.cpu().tolist())
 
-    # Strip prompt part if echoed
+    # Remove prompt part if duplicated in output
     prompt_decoded = tokenizer.decode(input_tokens)
     if response.startswith(prompt_decoded):
         response = response[len(prompt_decoded):].strip()
@@ -88,7 +89,7 @@ def generate_response(model, tokenizer, device, prompt, max_length=256,
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Inference for Akia HRM")
+    parser = argparse.ArgumentParser(description="Inference for Akia HRM (FP16-ready)")
     parser.add_argument('--model-path', required=True, help="Path to model checkpoint")
     parser.add_argument('--tokenizer-path', default='tokenizer_vocab.json', help="Path to tokenizer vocab json")
     parser.add_argument('--prompt', required=True, help="Prompt text for generation")
@@ -97,14 +98,15 @@ def main():
     parser.add_argument('--top-k', type=int, default=50)
     parser.add_argument('--top-p', type=float, default=0.9)
     parser.add_argument('--reasoning-steps', type=int, default=8)
-    parser.add_argument('--fp16', action='store_true', help="Use fp16 weights for inference")
 
     args = parser.parse_args()
 
-    model, tokenizer, device = load_model_and_tokenizer(
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    model, tokenizer, device, config = load_model_and_tokenizer(
         args.model_path,
         args.tokenizer_path,
-        use_fp16=args.fp16
+        device
     )
 
     print(f"\nPrompt: {args.prompt}\n")
