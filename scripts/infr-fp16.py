@@ -13,52 +13,50 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import argparse
-import torch
-from pathlib import Path
+import os, json, torch
 from model.hrm_architecture import AkiaHRM, AkiaHRMConfig
-from utils.tokenizer import SimpleTokenizer  # adjust path if needed
+from utils.tokenizer import SimpleTokenizer
 
-def load_model_and_tokenizer(model_path, tokenizer_path=None, config_path=None):
-    import json
-    from pathlib import Path
+def load_model_and_tokenizer(model_path, tokenizer_path, device):
+    """Load model + tokenizer with optional config.json fallback"""
+    # Determine config path based on model_path folder
+    config_path = os.path.join(os.path.dirname(model_path), "config.json")
 
-    # If config path not provided, look for config.json next to model
-    if config_path is None:
-        config_path = Path(model_path).parent / "config.json"
-
-    # Load config dict manually
-        # Try to load config.json, else use default
-    if config_path and os.path.exists(config_path):
+    if os.path.exists(config_path):
+        # Load config from file
         with open(config_path, "r") as f:
-            config = json.load(f)
-        model_config = AkiaHRMConfig(**config)
+            config_dict = json.load(f)
+        print(f"Loaded config from {config_path}")
+        model_config = AkiaHRMConfig(**config_dict)
     else:
+        # Fallback to default AkiaHRMConfig
         print("⚠️ Config file not found, using default AkiaHRMConfig")
-        model_config = AkiaHRMConfig()  # default params
-
-
-    # Initialize config object
-    config = AkiaHRMConfig(**config_dict)
-
-    # Build model
-    model = AkiaHRM(config)
-
-    # Load weights
-    state_dict = torch.load(model_path, map_location='cpu')
-    model.load_state_dict(state_dict)
+        model_config = AkiaHRMConfig()
 
     # Load tokenizer
-    if tokenizer_path is not None:
-        tokenizer = SimpleTokenizer.from_pretrained(tokenizer_path)
+    tokenizer = SimpleTokenizer.from_pretrained(tokenizer_path)
+
+    # Build model
+    model = AkiaHRM(model_config)
+    state_dict = torch.load(model_path, map_location=device)
+
+    # Handle whether you saved as full checkpoint or just model.state_dict
+    if "model_state_dict" in state_dict:
+        model.load_state_dict(state_dict["model_state_dict"], strict=False)
     else:
-        tokenizer = SimpleTokenizer()  # or your default creation method
+        model.load_state_dict(state_dict, strict=False)
 
-    # Set device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    model.eval()
 
-    return model, tokenizer, device, config
+    # (Optional) FP16
+    try:
+        model = model.half()
+    except Exception as e:
+        print(f"FP16 conversion failed: {e}")
+
+    model.eval()
+    return model, tokenizer, device, model_config
+
 
 
 @torch.inference_mode()
