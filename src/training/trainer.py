@@ -230,8 +230,75 @@ class AkiaTrainer:
         }
         
         return metrics
+    # utils/async_save.py
+import torch, multiprocessing, threading, os
+
+def _proc_save(state, tmp_path):
+    # Do the blocking torch.save in a separate process
+    torch.save(state, tmp_path)
+
+def async_torch_save(state, dest_path):
+    """
+    Save `state` asynchronously to `dest_path`.
+    Writes to a .saving temp file then atomically renames.
+    """
+    tmp_path = dest_path + ".saving"
+    p = multiprocessing.Process(target=_proc_save, args=(state, tmp_path))
+    p.start()
+
+    # background thread waits for save then renames
+    def _finalize():
+        p.join()
+        if os.path.exists(tmp_path):
+            os.replace(tmp_path, dest_path)
+    threading.Thread(target=_finalize, daemon=True).start()
+
+    return p.pid  # optional: you can log pid
+    from pathlib import Path
+    import torch
+    from utils.async_save import async_torch_save  # import the helper
     
     def save_checkpoint(self, save_path: str, is_best: bool = False):
+        """Save training checkpoint asynchronously with CPU tensors"""
+        # 1. Move model state to CPU first (avoid GPU sync penalty)
+        model_state = {k: v.detach().cpu() for k, v in self.model.state_dict().items()}
+    
+        checkpoint = {
+            'epoch': self.epoch,
+            'global_step': self.global_step,
+            'model_state_dict': model_state,
+            'best_loss': self.best_loss,
+            'config': self.config
+        }
+
+    # 2. Optimizer / scheduler / scaler moved to CPU if present
+        if hasattr(self, 'optimizer') and self.optimizer is not None:
+            opt_state = self.optimizer.state_dict()
+            checkpoint['optimizer_state_dict'] = {
+                k: (v.cpu() if isinstance(v, torch.Tensor) else v)
+                for k, v in opt_state.items()
+            }
+    
+        if hasattr(self, 'scheduler') and self.scheduler is not None:
+            sched_state = self.scheduler.state_dict()
+            checkpoint['scheduler_state_dict'] = {
+                k: (v.cpu() if isinstance(v, torch.Tensor) else v)
+                for k, v in sched_state.items()
+            }
+    
+        if self.use_amp and hasattr(self, 'scaler') and self.scaler is not None:
+            checkpoint['scaler_state_dict'] = self.scaler.state_dict()  # scaler small already
+    
+        # 3. Asynchronous save
+        async_torch_save(checkpoint, save_path)
+    
+        if is_best:
+            best_path = str(Path(save_path).parent / 'best_model.pt')
+            async_torch_save(checkpoint, best_path)
+    
+        print(f"Async checkpoint triggered: {save_path}")
+
+    def save_previous_checkpoint(self, save_path: str, is_best: bool = False):
         """Save training checkpoint"""
         checkpoint = {
             'epoch': self.epoch,
