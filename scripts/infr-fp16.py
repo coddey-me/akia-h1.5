@@ -110,7 +110,7 @@ def main():
     model, tokenizer, _, config = load_model_and_tokenizer(
         args.model_path,
         tokenizer_path=args.tokenizer_path,
-        device
+        device,
     )
 
     model.to(device)
