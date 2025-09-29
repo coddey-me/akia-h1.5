@@ -5,6 +5,7 @@ Standalone inference script for Akia HRM (handles FP16 + mixed checkpoint format
 Usage:
   python infr-fp16.py --model-path checkpoints/final_model.pt --prompt "Your question here"
 """
+import os
 import sys
 from pathlib import Path
 
